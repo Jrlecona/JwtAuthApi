@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 
 [Route("api/users")]
 [ApiController]
-[Authorize] // 🔒 Protegido con JWT
 public class UsersController : ControllerBase
 {
     private static readonly List<User> Users =
@@ -24,9 +23,18 @@ public class UsersController : ControllerBase
         };
 
     [HttpGet]
+    [Authorize(Roles = "Admin")] // 🔒 Solo los admins pueden acceder
     public IActionResult GetUsers()
     {
         return Ok(Users);
+    }
+
+    [HttpGet("{id}")]
+    [Authorize(Roles = "Admin,User")] // 🔒 Admin y User pueden acceder
+    public IActionResult GetUserById(int id)
+    {
+        var user = Users.FirstOrDefault(u => u.Id == id);
+        return user == null ? NotFound() : Ok(user);
     }
 }
 

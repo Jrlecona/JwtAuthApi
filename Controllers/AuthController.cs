@@ -18,15 +18,17 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public IActionResult Login([FromBody] LoginRequest request)
     {
-        if (request.Username == "admin" && request.Password == "password123")
+        var userRole = ValidateUser(request.Username, request.Password);
+        if (userRole == null)
         {
-            var token = GenerateJwtToken(request.Username);
-            return Ok(new { token });
+            return Unauthorized();
         }
-        return Unauthorized();
+
+        var token = GenerateJwtToken(request.Username, userRole);
+        return Ok(new { token });
     }
 
-    private string GenerateJwtToken(string username)
+    private string GenerateJwtToken(string? username, string role)
     {
         var jwtSettings = _config.GetSection("JwtSettings");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]));
@@ -34,7 +36,8 @@ public class AuthController : ControllerBase
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, username),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(ClaimTypes.Role, role) // 👉 Agregamos el rol al token
         };
 
         var token = new JwtSecurityToken(
@@ -46,6 +49,16 @@ public class AuthController : ControllerBase
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private string? ValidateUser(string? username, string? password)
+    {
+        // Aquí puedes validar contra una base de datos. Por ahora, usamos valores fijos
+        if (username == "admin" && password == "password123")
+            return "Admin";
+        if (username == "user" && password == "password123")
+            return "User";
+        return null;
     }
 }
 
